@@ -3,6 +3,12 @@ var zoom = 12.5;
 var x = 0;
 var y = 0;
 
+const FULL = 1;
+const EMPTY = 0;
+const RANDOM = -1;
+
+var isAnimated = false;
+
 // the grid is a hashtable
 var grid = {};
 
@@ -44,7 +50,7 @@ function initGrid() {
     // fill grid with empty cells
     for (var i = Math.floor(x - canvas.width / zoom / 2); i < x + canvas.width / zoom / 2; i++) {
         for (var j = Math.floor(y - canvas.height / zoom / 2); j < y + canvas.height / zoom / 2; j++) {
-            grid[hash(i, j)] = /* random between 0 and 1 */ Math.floor(Math.random() * 2);
+            grid[hash(i, j)] = generate(i, j, mode = FULL, prob = 0.05);
         }
     }
 }
@@ -57,10 +63,10 @@ function drawGrid() {
     // draw grid
     ctx.fillStyle = '#fff';
 
-    for (var i = Math.floor(x-canvas.width / zoom / 2); i < x + canvas.width / zoom / 2; i++) {
+    for (var i = Math.floor(x - canvas.width / zoom / 2); i < x + canvas.width / zoom / 2; i++) {
         for (var j = Math.floor(y - canvas.height / zoom / 2); j < y + canvas.height / zoom / 2; j++) {
             if (grid[hash(i, j)] == 1) {
-                ctx.fillRect((i-x) * zoom, (j-y) * zoom, zoom, zoom);
+                ctx.fillRect((i - x) * zoom, (j - y) * zoom, zoom, zoom);
             }
         }
     }
@@ -79,7 +85,7 @@ window.onresize = function () {
     for (let i = Math.floor(x - canvas.width / zoom / 2); i < x + canvas.width / zoom / 2; i++) {
         for (let j = Math.floor(y - canvas.height / zoom / 2); j < y + canvas.height / zoom / 2; j++) {
             if (!(hash(i, j) in grid)) {
-                grid[hash(i, j)] = /* random between 0 and 1 */ Math.floor(Math.random() * 2);
+                grid[hash(i, j)] = generate(i, j, mode = FULL, prob = 0.05);
             }
         }
     }
@@ -96,7 +102,7 @@ function moveGrid(dx, dy) {
     for (let i = Math.floor(x - canvas.width / zoom / 2); i < x + canvas.width / zoom / 2; i++) {
         for (let j = Math.floor(y - canvas.height / zoom / 2); j < y + canvas.height / zoom / 2; j++) {
             if (!(hash(i, j) in grid)) {
-                grid[hash(i, j)] = /* random between 0 and 1 */ Math.floor(Math.random() * 2);
+                grid[hash(i, j)] = generate(i, j, mode = FULL, prob = 0.05);
             }
         }
     }
@@ -123,12 +129,25 @@ function zoomGrid(dz) {
     for (let i = Math.floor(x - canvas.width / zoom / 2); i < x + canvas.width / zoom / 2; i++) {
         for (let j = Math.floor(y - canvas.height / zoom / 2); j < y + canvas.height / zoom / 2; j++) {
             if (!(hash(i, j) in grid)) {
-                grid[hash(i, j)] = /* random between 0 and 1 */ Math.floor(Math.random() * 2);
+                grid[hash(i, j)] = generate(i, j, mode = FULL, prob = 0.05);
             }
         }
     }
 
     drawGrid();
+}
+
+function generate(i, j, mode = FULL, prob = 0.5) {
+    switch (mode) {
+        case FULL:
+            return 1;
+        case EMPTY:
+            return 0;
+        case RANDOM:
+            return Math.random() < prob ? 1 : 0;
+        default:
+            return Math.abs(i + j) % 2;
+    }
 }
 
 function initEventListeners() {
@@ -143,12 +162,47 @@ function initEventListeners() {
         let dx = e.movementX;
         let dy = e.movementY;
 
-        moveGrid(dx/zoom, dy/zoom);
+        moveGrid(dx / zoom, dy / zoom);
     });
 
     // zoom grid when mouse wheel is scrolled
     canvas.addEventListener('wheel', function (e) {
         let dz = e.deltaY;
-        zoomGrid(dz/zoom);
+        zoomGrid(dz / zoom);
     });
+
+    // start animating when space is pressed
+    document.addEventListener('keydown', function (e) {
+        if (e.key == " ") {
+
+            if (isAnimated) {
+                isAnimated = false;
+                window.cancelAnimationFrame();
+                return;
+            }
+
+            isAnimated = true;
+            animate();
+        }
+    });
+}
+
+// animate
+function animate() {
+    // this is a simple "lights off" animation. It's not really a cellular automata, but it works well enough.
+    for (let i = Math.floor(x - canvas.width / zoom / 2); i < x + canvas.width / zoom / 2; i++) {
+        for (let j = Math.floor(y - canvas.height / zoom / 2); j < y + canvas.height / zoom / 2; j++) {
+            if (grid[hash(i, j)] == 1) {
+                grid[hash(i, j)] = generate(i, j, mode = RANDOM, prob = 0.85);
+            }
+        }
+    }
+
+    // draw grid
+    drawGrid();
+
+    // if animation is running, call animate again
+    if (isAnimated) {
+        window.requestAnimationFrame(animate);
+    }
 }
