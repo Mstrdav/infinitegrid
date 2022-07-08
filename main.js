@@ -1,5 +1,5 @@
 var canvas, ctx;
-var zoom = 1;
+var zoom = 10;
 var x = 0;
 var y = 0;
 
@@ -15,11 +15,8 @@ function hash(x, y) {
 window.onload = function () {
     initCanvas();
     initGrid();
-    // draw grid at animation frame
-    window.requestAnimationFrame(function () {
-        drawGrid();
-        window.requestAnimationFrame(arguments.callee);
-    });
+    drawGrid();
+    initEventListeners();
 }
 
 // initialize canvas
@@ -31,6 +28,10 @@ function initCanvas() {
     // set canvas width and height
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+
+    // translate canvas to center
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+
     // set canvas background color
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -41,9 +42,9 @@ function initCanvas() {
 // initialize grid
 function initGrid() {
     // fill grid with empty cells
-    for (var i = 0; i < canvas.width; i += 10 * zoom) {
-        for (var j = 0; j < canvas.height; j += 10 * zoom) {
-            grid[hash(i, j)] = (i + j)/10%2;
+    for (var i = Math.floor(x - canvas.width / zoom / 2); i < x + canvas.width / zoom / 2; i++) {
+        for (var j = Math.floor(y - canvas.height / zoom / 2); j < y + canvas.height / zoom / 2; j++) {
+            grid[hash(i, j)] = /* random between 0 and 1 */ Math.floor(Math.random() * 2);
         }
     }
 }
@@ -52,14 +53,14 @@ function initGrid() {
 function drawGrid() {
     // clear canvas
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0 - canvas.width / 2, 0 - canvas.height / 2, canvas.width, canvas.height);
     // draw grid
     ctx.fillStyle = '#fff';
 
-    for (var i = 0; i < canvas.width; i += 10 * zoom) {
-        for (var j = 0; j < canvas.height; j += 10 * zoom) {
+    for (var i = Math.floor(x - canvas.width / zoom / 2); i < x + canvas.width / zoom / 2; i++) {
+        for (var j = Math.floor(y - canvas.height / zoom / 2); j < y + canvas.height / zoom / 2; j++) {
             if (grid[hash(i, j)] == 1) {
-                ctx.fillRect(i, j, 10 * zoom, 10 * zoom);
+                ctx.fillRect(i * zoom, j * zoom, zoom, zoom);
             }
         }
     }
@@ -69,16 +70,67 @@ function drawGrid() {
 window.onresize = function () {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    ctx.translate(canvas.width / 2, canvas.height / 2);
 
     // refill canvas with background color
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(-canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
 
     // add previously unseen cells to grid
-    for (var i = 0; i < canvas.width; i += 10 * zoom) {
-        for (var j = 0; j < canvas.height; j += 10 * zoom) {
+    for (let i = Math.floor(x - canvas.width / zoom / 2); i < x + canvas.width / zoom / 2; i++) {
+        for (let j = Math.floor(y - canvas.height / zoom / 2); j < y + canvas.height / zoom / 2; j++) {
             if (!(hash(i, j) in grid)) {
-                grid[hash(i, j)] = (i + j)/10%2;
+                grid[hash(i, j)] = /* random between 0 and 1 */ Math.floor(Math.random() * 2);
             }
         }
     }
+
+    // draw grid
+    drawGrid();
+}
+
+// move grid
+function moveGrid(dx, dy) {
+    x += dx;
+    y += dy;
+    drawGrid();
+}
+
+// zoom grid
+function zoomGrid(dz) {
+    zoom += dz;
+    drawGrid();
+}
+
+function initEventListeners() {
+    // detect drag event
+    // canvas.addEventListener('mousedown', function (e) {
+    //     var rect = canvas.getBoundingClientRect();
+    //     var x = e.clientX - rect.left;
+    //     var y = e.clientY - rect.top;
+    //     var dx = Math.floor(x / zoom - canvas.width / zoom / 2);
+    //     var dy = Math.floor(y / zoom - canvas.height / zoom / 2);
+    //     var hashed = hash(dx, dy);
+    //     console.log(dx,dy)
+    //     var cell = grid[hashed];
+    //     if (cell == 1) {
+    //         grid[hashed] = 0;
+    //     } else {
+    //         grid[hashed] = 1;
+    //     }
+    //     drawGrid();
+    // });
+
+    // move grid when mouse is dragged
+    canvas.addEventListener('mousemove', function (e) {
+        var rect = canvas.getBoundingClientRect();
+        // if mouse isnt pressed return
+        if (!e.buttons) {
+            return;
+        }
+
+        let dx = e.movementX;
+        let dy = e.movementY;
+
+        moveGrid(dx, dy);
+    });
 }
