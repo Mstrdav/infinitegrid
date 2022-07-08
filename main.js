@@ -72,4 +72,13 @@ window.onresize = function () {
 
     // refill canvas with background color
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // add previously unseen cells to grid
+    for (var i = 0; i < canvas.width; i += 10 * zoom) {
+        for (var j = 0; j < canvas.height; j += 10 * zoom) {
+            if (!(hash(i, j) in grid)) {
+                grid[hash(i, j)] = (i + j)/10%2;
+            }
+        }
+    }
 }
