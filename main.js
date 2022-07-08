@@ -1,5 +1,5 @@
 var canvas, ctx;
-var zoom = 10;
+var zoom = 12.5;
 var x = 0;
 var y = 0;
 
@@ -57,10 +57,10 @@ function drawGrid() {
     // draw grid
     ctx.fillStyle = '#fff';
 
-    for (var i = Math.floor(x - canvas.width / zoom / 2); i < x + canvas.width / zoom / 2; i++) {
+    for (var i = Math.floor(x-canvas.width / zoom / 2); i < x + canvas.width / zoom / 2; i++) {
         for (var j = Math.floor(y - canvas.height / zoom / 2); j < y + canvas.height / zoom / 2; j++) {
             if (grid[hash(i, j)] == 1) {
-                ctx.fillRect(i * zoom, j * zoom, zoom, zoom);
+                ctx.fillRect((i-x) * zoom, (j-y) * zoom, zoom, zoom);
             }
         }
     }
@@ -90,36 +90,48 @@ window.onresize = function () {
 
 // move grid
 function moveGrid(dx, dy) {
-    x += dx;
-    y += dy;
+    x -= dx;
+    y -= dy;
+
+    for (let i = Math.floor(x - canvas.width / zoom / 2); i < x + canvas.width / zoom / 2; i++) {
+        for (let j = Math.floor(y - canvas.height / zoom / 2); j < y + canvas.height / zoom / 2; j++) {
+            if (!(hash(i, j) in grid)) {
+                grid[hash(i, j)] = /* random between 0 and 1 */ Math.floor(Math.random() * 2);
+            }
+        }
+    }
+
+    // draw grid
     drawGrid();
 }
 
 // zoom grid
 function zoomGrid(dz) {
     zoom += dz;
+
+    // if zoom is too small, set it to 1
+    if (zoom < 6) {
+        zoom = 6;
+    }
+
+    // if zoom is too big, set it to max
+    if (zoom > 100) {
+        zoom = 100;
+    }
+
+    // add missing cells to grid
+    for (let i = Math.floor(x - canvas.width / zoom / 2); i < x + canvas.width / zoom / 2; i++) {
+        for (let j = Math.floor(y - canvas.height / zoom / 2); j < y + canvas.height / zoom / 2; j++) {
+            if (!(hash(i, j) in grid)) {
+                grid[hash(i, j)] = /* random between 0 and 1 */ Math.floor(Math.random() * 2);
+            }
+        }
+    }
+
     drawGrid();
 }
 
 function initEventListeners() {
-    // detect drag event
-    // canvas.addEventListener('mousedown', function (e) {
-    //     var rect = canvas.getBoundingClientRect();
-    //     var x = e.clientX - rect.left;
-    //     var y = e.clientY - rect.top;
-    //     var dx = Math.floor(x / zoom - canvas.width / zoom / 2);
-    //     var dy = Math.floor(y / zoom - canvas.height / zoom / 2);
-    //     var hashed = hash(dx, dy);
-    //     console.log(dx,dy)
-    //     var cell = grid[hashed];
-    //     if (cell == 1) {
-    //         grid[hashed] = 0;
-    //     } else {
-    //         grid[hashed] = 1;
-    //     }
-    //     drawGrid();
-    // });
-
     // move grid when mouse is dragged
     canvas.addEventListener('mousemove', function (e) {
         var rect = canvas.getBoundingClientRect();
@@ -131,6 +143,12 @@ function initEventListeners() {
         let dx = e.movementX;
         let dy = e.movementY;
 
-        moveGrid(dx, dy);
+        moveGrid(dx/zoom, dy/zoom);
+    });
+
+    // zoom grid when mouse wheel is scrolled
+    canvas.addEventListener('wheel', function (e) {
+        let dz = e.deltaY;
+        zoomGrid(dz/zoom);
     });
 }
